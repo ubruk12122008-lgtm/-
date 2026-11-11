@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Календарь Советов Первых</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500;600&display=swap">
+<style>
+/* Layout: one column on phones; month grid left and event list right from 900px.
+   Palette: cool paper neutrals, one blue accent, four level colors that always travel with a text label. */
+:root{
+  --bg:#F2F5F9; --surface:#FFFFFF; --ink:#13202F; --muted:#59687A; --line:#DCE3EC; --soft:#EBF0F6;
+  --accent:#1F4FD8; --accent-ink:#FFFFFF; --danger:#C62B3F;
+  --school:#0B8A79; --district:#B87405; --republic:#7439BF; --federal:#D1304A;
+  --font-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-head:"Unbounded","Golos Text",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0E1620; --surface:#16212E; --ink:#E7EDF5; --muted:#9BA9BA; --line:#26364A; --soft:#1D2A3A;
+    --accent:#7DA0FF; --accent-ink:#0B1220; --danger:#FF7A8C;
+    --school:#38C7B1; --district:#F1B23F; --republic:#B792F2; --federal:#FF7088;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+h1{font-family:var(--font-head);font-weight:600;font-size:clamp(20px,4.5vw,28px);line-height:1.15;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0;max-width:56ch}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:500}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent}
+.btn[disabled]{opacity:.55;cursor:default}
+.note{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--muted)}
+.editbar{background:var(--soft);border:1px solid var(--accent);border-radius:8px;padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.editbar p{margin:0;flex:1 1 320px}
+.editbar .acts{display:flex;gap:8px;flex-wrap:wrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px}
+.chip[aria-pressed="false"]{opacity:.5}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--c)}
+.main{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@media (min-width:900px){.main{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:start}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.cal-head h2{font-family:var(--font-head);font-weight:500;font-size:17px;margin:0}
+.nav{display:flex;gap:6px}
+.nav button{min-width:40px;min-height:40px;padding:0 10px}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.wd{font-size:12px;color:var(--muted);text-align:center;padding:2px 0 6px;letter-spacing:.04em;text-transform:uppercase}
+.day{background:var(--bg);border:1px solid transparent;border-radius:8px;padding:6px;min-height:52px;text-align:left;display:flex;flex-direction:column;gap:4px;min-width:0;overflow:hidden}
+.day.out{opacity:.45}
+.day:hover{border-color:var(--line)}
+.day.today .num{background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px}
+.day.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.num{font-size:13px;font-weight:500;align-self:flex-start;font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:3px;flex-wrap:wrap}
+.dots .dot{width:7px;height:7px}
+.tags{display:none;flex-direction:column;gap:2px;min-width:0}
+.tag{font-size:11px;line-height:1.25;padding:1px 5px;border-left:3px solid var(--c);background:var(--surface);border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.more{font-size:11px;color:var(--muted)}
+@media (min-width:640px){
+  .day{min-height:94px}
+  .dots{display:none}
+  .tags{display:flex}
+}
+.list-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.list-head h2{font-family:var(--font-head);font-weight:500;font-size:17px;margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:7px 12px;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.events{display:flex;flex-direction:column;gap:10px;list-style:none;margin:0;padding:0}
+.ev{border:1px solid var(--line);border-radius:10px;background:var(--surface);min-width:0}
+.ev.past{opacity:.6}
+.ev-btn{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;width:100%;text-align:left;background:transparent;border:0;padding:12px;border-radius:10px}
+.when{border-radius:8px;background:var(--soft);text-align:center;padding:6px 0;align-self:start}
+.when b{display:block;font-size:20px;line-height:1.1;font-variant-numeric:tabular-nums}
+.when span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.ev-title{font-weight:600;overflow-wrap:anywhere}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:13px;margin-top:4px}
+.lvl{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500}
+.same{font-size:13px;color:var(--muted);margin-top:4px}
+.detail{border-top:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:8px}
+.detail dl{margin:0;display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 12px;font-size:14px}
+.detail dt{color:var(--muted)}
+.detail dd{margin:0;overflow-wrap:anywhere;white-space:pre-line}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:22px 16px;text-align:center;color:var(--muted)}
+.empty strong{display:block;color:var(--ink);margin-bottom:4px}
+.updated{color:var(--muted);font-size:13px;text-align:center}
+.veil{position:fixed;inset:0;background:rgba(8,14,22,.55);display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto;z-index:20}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:14px;width:100%;max-width:520px;padding:18px;margin-block:auto}
+.dlg h2{font-family:var(--font-head);font-weight:500;font-size:18px;margin:0 0 14px}
+.fld{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.fld label{font-size:13px;color:var(--muted)}
+.fld input,.fld select,.fld textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+.fld textarea{min-height:76px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:420px){.two{grid-template-columns:1fr}}
+.err{color:var(--danger);font-size:13px;min-height:18px;margin:0 0 8px}
+.foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#status{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;z-index:30;max-width:calc(100% - 32px);font-size:14px}
+@media (prefers-reduced-motion:no-preference){.veil{animation:f .12s ease-out}@keyframes f{from{opacity:0}}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Календарь Советов Первых</h1>
+      <p class="sub">Одно место для всех событий: школьных, районных, республиканских и всероссийских. Видно, что и когда проходит, и где даты совпали.</p>
+    </div>
+    <button class="btn primary" id="add" type="button" hidden>Добавить событие</button>
+  </header>
+
+  <div class="editbar" id="editbar" hidden>
+    <p><strong>Режим редактора.</strong> Изменения пока видны только вам, в этом браузере. Чтобы их увидели все, скачайте events.json и замените им файл на хостинге.</p>
+    <div class="acts">
+      <button class="btn primary" id="dl" type="button">Скачать events.json</button>
+      <button class="btn" id="reset" type="button">Сбросить черновик</button>
+    </div>
+  </div>
+  <div class="note" id="note" hidden></div>
+
+  <div class="filters" id="filters" role="group" aria-label="Уровень событий"></div>
+
+  <div class="main">
+    <section class="card" aria-label="Календарь">
+      <div class="cal-head">
+        <h2 id="monthTitle"></h2>
+        <div class="nav">
+          <button class="btn" id="prev" type="button" aria-label="Предыдущий месяц">←</button>
+          <button class="btn" id="todayBtn" type="button">Сегодня</button>
+          <button class="btn" id="next" type="button" aria-label="Следующий месяц">→</button>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section class="card" aria-label="Список событий">
+      <div class="list-head">
+        <h2 id="listTitle"></h2>
+        <div class="seg" id="seg">
+          <button type="button" data-scope="month" aria-pressed="true">Месяц</button>
+          <button type="button" data-scope="upcoming" aria-pressed="false">Предстоящие</button>
+        </div>
+      </div>
+      <ul class="events" id="events"></ul>
+    </section>
+  </div>
+  <p class="updated" id="updated" hidden></p>
+</div>
+
+<div class="veil" id="veil" hidden>
+  <form class="dlg" id="form" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" novalidate>
+    <h2 id="dlgTitle">Новое событие</h2>
+    <div class="fld"><label for="f-title">Название</label><input id="f-title" maxlength="140" autocomplete="off"></div>
+    <div class="two">
+      <div class="fld"><label for="f-date">Дата</label><input id="f-date" type="date"></div>
+      <div class="fld"><label for="f-time">Время начала</label><input id="f-time" type="time"></div>
+    </div>
+    <div class="two">
+      <div class="fld"><label for="f-level">Уровень</label><select id="f-level"></select></div>
+      <div class="fld"><label for="f-format">Формат</label><select id="f-format"></select></div>
+    </div>
+    <div class="fld"><label for="f-place">Место или ссылка</label><input id="f-place" maxlength="200" autocomplete="off"></div>
+    <div class="fld"><label for="f-org">Кто организует</label><input id="f-org" maxlength="140" autocomplete="off" placeholder="Например, Совет Первых района"></div>
+    <div class="fld"><label for="f-contact">Контакт для вопросов</label><input id="f-contact" maxlength="140" autocomplete="off"></div>
+    <div class="fld"><label for="f-desc">Описание</label><textarea id="f-desc" maxlength="1200"></textarea></div>
+    <p class="err" id="formErr" role="alert"></p>
+    <div class="foot">
+      <button class="btn" type="button" id="cancel">Отмена</button>
+      <button class="btn primary" type="submit" id="saveBtn">Сохранить</button>
+    </div>
+  </form>
+</div>
+<div id="status" role="status" hidden></div>
+
+<script>
+(function(){
+  var MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  var MONTHS_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+  var WD=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  var LEVELS={school:'Школа',district:'Район',republic:'Республика',federal:'Всероссийский'};
+  var LVL_VAR={school:'--school',district:'--district',republic:'--republic',federal:'--federal'};
+  var FORMATS=['Очно','Онлайн','Смешанный'];
+  var KEY='sovet-pervyh-calendar-draft-v1';
+
+  /* Редактор открывается только по адресу с #edit. Для остальных страница только для чтения.
+     Всё, что видят посетители, лежит в файле events.json на хостинге, поэтому менять его может только тот, кто им управляет. */
+  var editMode=location.hash==='#edit';
+  var events=[],updatedAt='',loaded=false,failed=false;
+  var now=new Date();
+  function ymd(y,m,d){return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+  var todayStr=ymd(now.getFullYear(),now.getMonth(),now.getDate());
+  var cur={y:now.getFullYear(),m:now.getMonth()};
+  var scope='month',selDate=null,openId=null,editId=null,delArm=null;
+  var active={school:true,district:true,republic:true,federal:true};
+
+  var $=function(id){return document.getElementById(id);};
+  function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+  function parts(s){var a=s.split('-').map(Number);return {y:a[0],m:a[1]-1,d:a[2]};}
+  function dow(s){var p=parts(s);return (new Date(p.y,p.m,p.d).getDay()+6)%7;}
+  function longDate(s){var p=parts(s);return p.d+' '+MONTHS_GEN[p.m]+' '+p.y;}
+  function plural(n,a,b,c){var m=n%100,k=n%10;if(m>10&&m<20)return c;if(k===1)return a;if(k>1&&k<5)return b;return c;}
+  function cmp(a,b){return (a.date+(a.time||'')).localeCompare(b.date+(b.time||''))||String(a.title).localeCompare(String(b.title),'ru');}
+  function visible(){return events.filter(function(e){return active[e.level]!==false;}).sort(cmp);}
+  function clean(list){return (Array.isArray(list)?list:[]).filter(function(o){return o&&o.title&&/^\d{4}-\d{2}-\d{2}$/.test(o.date||'')&&LEVELS[o.level];}).map(function(o,i){if(!o.id)o.id='e'+i+'-'+o.date;return o;});}
+  function newId(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+  function setStatus(t){var s=$('status');s.textContent=t;s.hidden=false;clearTimeout(setStatus.t);setStatus.t=setTimeout(function(){s.hidden=true;},3500);}
+  function saveDraft(){try{localStorage.setItem(KEY,JSON.stringify(events));}catch(e){}}
+  function loadDraft(){try{var s=localStorage.getItem(KEY);return s?JSON.parse(s):null;}catch(e){return null;}}
+  function clearDraft(){try{localStorage.removeItem(KEY);}catch(e){}}
+
+  function renderFilters(){
+    var box=$('filters');box.textContent='';
+    Object.keys(LEVELS).forEach(function(k){
+      var b=el('button','chip');b.type='button';b.setAttribute('aria-pressed',String(active[k]));
+      var d=el('span','dot');d.style.setProperty('--c','var('+LVL_VAR[k]+')');
+      b.appendChild(d);b.appendChild(document.createTextNode(LEVELS[k]));
+      b.addEventListener('click',function(){active[k]=!active[k];render();});
+      box.appendChild(b);
+    });
+  }
+
+  function renderNote(){
+    var n=$('note'),t='';
+    if(!loaded)t='Загружаем события…';
+    else if(failed)t='Не удалось загрузить файл events.json. Откройте календарь по адресу сайта, а не как файл с компьютера.';
+    n.hidden=!t;n.textContent=t;
+    $('add').hidden=!editMode;
+    $('editbar').hidden=!editMode;
+    var u=$('updated');
+    if(!editMode&&updatedAt){u.textContent='Обновлено: '+longDate(updatedAt);u.hidden=false;}else u.hidden=true;
+  }
+
+  function renderGrid(){
+    $('monthTitle').textContent=MONTHS[cur.m]+' '+cur.y;
+    var g=$('grid');g.textContent='';
+    WD.forEach(function(w){g.appendChild(el('div','wd',w));});
+    var first=(new Date(cur.y,cur.m,1).getDay()+6)%7;
+    var start=new Date(cur.y,cur.m,1-first);
+    var vis=visible(),byDate={};
+    vis.forEach(function(e){(byDate[e.date]=byDate[e.date]||[]).push(e);});
+    for(var i=0;i<42;i++){
+      var dt=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+      if(i>=35&&dt.getMonth()!==cur.m)break;
+      var s=ymd(dt.getFullYear(),dt.getMonth(),dt.getDate());
+      var list=byDate[s]||[];
+      var b=el('button','day'+(dt.getMonth()!==cur.m?' out':'')+(s===todayStr?' today':'')+(s===selDate?' sel':''));
+      b.type='button';
+      b.setAttribute('aria-label',longDate(s)+(list.length?', событий: '+list.length:''));
+      b.setAttribute('aria-pressed',String(s===selDate));
+      b.appendChild(el('span','num',String(dt.getDate())));
+      if(list.length){
+        var dots=el('div','dots');
+        list.slice(0,6).forEach(function(e){var d=el('span','dot');d.style.setProperty('--c','var('+LVL_VAR[e.level]+')');dots.appendChild(d);});
+        b.appendChild(dots);
+        var tags=el('div','tags');
+        list.slice(0,2).forEach(function(e){var t=el('span','tag',e.title);t.style.setProperty('--c','var('+LVL_VAR[e.level]+')');tags.appendChild(t);});
+        if(list.length>2)tags.appendChild(el('span','more','ещё '+(list.length-2)));
+        b.appendChild(tags);
+      }
+      (function(sv){b.addEventListener('click',function(){selDate=(selDate===sv)?null:sv;openId=null;render();});})(s);
+      g.appendChild(b);
+    }
+  }
+
+  function renderList(){
+    var vis=visible(),items,title;
+    $('seg').querySelectorAll('button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.scope===scope&&!selDate));});
+    if(selDate){items=vis.filter(function(e){return e.date===selDate;});title=longDate(selDate);}
+    else if(scope==='upcoming'){items=vis.filter(function(e){return e.date>=todayStr;});title='Предстоящие события';}
+    else{var pre=cur.y+'-'+String(cur.m+1).padStart(2,'0');items=vis.filter(function(e){return e.date.indexOf(pre)===0;});title=MONTHS[cur.m]+' '+cur.y;}
+    $('listTitle').textContent=title+' · '+items.length;
+    var ul=$('events');ul.textContent='';
+    if(!items.length){
+      var li=el('li','empty');
+      li.appendChild(el('strong',null,events.length?'В этом списке событий нет.':'Пока в календаре пусто.'));
+      li.appendChild(document.createTextNode(events.length||!editMode?'Загляните в другой месяц или включите другие уровни.':'Нажмите «Добавить событие» и внесите первое.'));
+      ul.appendChild(li);return;
+    }
+    items.forEach(function(e){ul.appendChild(eventNode(e));});
+  }
+
+  function eventNode(e){
+    var li=el('li','ev'+(e.date<todayStr?' past':''));
+    var b=el('button','ev-btn');b.type='button';b.setAttribute('aria-expanded',String(openId===e.id));
+    var p=parts(e.date);
+    var w=el('div','when');w.appendChild(el('b',null,String(p.d)));w.appendChild(el('span',null,WD[dow(e.date)]));
+    var body=el('div');
+    body.appendChild(el('div','ev-title',e.title));
+    var meta=el('div','meta');
+    var l=el('span','lvl');var d=el('span','dot');d.style.setProperty('--c','var('+LVL_VAR[e.level]+')');l.appendChild(d);l.appendChild(document.createTextNode(LEVELS[e.level]||''));meta.appendChild(l);
+    if(e.time)meta.appendChild(el('span',null,e.time));
+    if(e.place)meta.appendChild(el('span',null,e.place));
+    body.appendChild(meta);
+    var same=events.filter(function(o){return o.id!==e.id&&o.date===e.date;}).length;
+    if(same)body.appendChild(el('div','same','В этот же день ещё '+same+' '+plural(same,'событие','события','событий')));
+    b.appendChild(w);b.appendChild(body);
+    b.addEventListener('click',function(){openId=(openId===e.id)?null:e.id;delArm=null;renderList();});
+    li.appendChild(b);
+    if(openId===e.id){
+      var det=el('div','detail');var dl=el('dl');
+      var row=function(k,v){if(!v)return;dl.appendChild(el('dt',null,k));dl.appendChild(el('dd',null,v));};
+      row('Дата',longDate(e.date)+(e.time?', '+e.time:''));
+      row('Формат',e.format);row('Место',e.place);row('Организатор',e.organizer);row('Контакт',e.contact);row('Описание',e.description);
+      det.appendChild(dl);
+      if(editMode){
+        var act=el('div','actions');
+        var eb=el('button','btn','Изменить');eb.type='button';eb.addEventListener('click',function(){openForm(e);});
+        var xb=el('button','btn danger',delArm===e.id?'Точно удалить?':'Удалить');xb.type='button';
+        xb.addEventListener('click',function(){
+          if(delArm!==e.id){delArm=e.id;renderList();return;}
+          events=events.filter(function(o){return o.id!==e.id;});saveDraft();openId=null;delArm=null;setStatus('Событие удалено');render();
+        });
+        act.appendChild(eb);act.appendChild(xb);det.appendChild(act);
+      }
+      li.appendChild(det);
+    }
+    return li;
+  }
+
+  function render(){renderNote();renderFilters();renderGrid();renderList();}
+
+  function fillSelects(){
+    var l=$('f-level');Object.keys(LEVELS).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=LEVELS[k];l.appendChild(o);});
+    var f=$('f-format');FORMATS.forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=k;f.appendChild(o);});
+  }
+  function openForm(e){
+    editId=e?e.id:null;
+    $('dlgTitle').textContent=e?'Изменить событие':'Новое событие';
+    $('f-title').value=e?e.title:'';
+    $('f-date').value=e?e.date:(selDate||'');
+    $('f-time').value=e&&e.time?e.time:'';
+    $('f-level').value=e?e.level:'district';
+    $('f-format').value=e&&e.format?e.format:'Очно';
+    $('f-place').value=e&&e.place?e.place:'';
+    $('f-org').value=e&&e.organizer?e.organizer:'';
+    $('f-contact').value=e&&e.contact?e.contact:'';
+    $('f-desc').value=e&&e.description?e.description:'';
+    $('formErr').textContent='';
+    $('veil').hidden=false;
+    setTimeout(function(){$('f-title').focus();},0);
+  }
+  function closeForm(){$('veil').hidden=true;editId=null;}
+  function submit(ev){
+    ev.preventDefault();
+    var title=$('f-title').value.trim(),date=$('f-date').value;
+    if(!title){$('formErr').textContent='Напишите название события.';$('f-title').focus();return;}
+    if(!date){$('formErr').textContent='Выберите дату.';$('f-date').focus();return;}
+    var data={title:title,date:date,time:$('f-time').value,level:$('f-level').value,format:$('f-format').value,
+      place:$('f-place').value.trim(),organizer:$('f-org').value.trim(),contact:$('f-contact').value.trim(),description:$('f-desc').value.trim()};
+    if(editId){events=events.map(function(o){return o.id===editId?Object.assign({},o,data):o;});}
+    else{data.id=newId();events.push(data);}
+    saveDraft();
+    var p=parts(date);cur={y:p.y,m:p.m};selDate=null;
+    closeForm();setStatus('Сохранено в черновике. Не забудьте скачать events.json.');render();
+  }
+  function download(){
+    var out={updated:todayStr,events:events.slice().sort(cmp)};
+    var blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='events.json';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(a.href);},1500);
+  }
+
+  fillSelects();
+  $('add').addEventListener('click',function(){openForm(null);});
+  $('cancel').addEventListener('click',closeForm);
+  $('form').addEventListener('submit',submit);
+  $('dl').addEventListener('click',download);
+  $('reset').addEventListener('click',function(){clearDraft();location.reload();});
+  $('veil').addEventListener('mousedown',function(e){if(e.target===$('veil'))closeForm();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('veil').hidden)closeForm();});
+  window.addEventListener('hashchange',function(){location.reload();});
+  $('prev').addEventListener('click',function(){cur.m--;if(cur.m<0){cur.m=11;cur.y--;}selDate=null;render();});
+  $('next').addEventListener('click',function(){cur.m++;if(cur.m>11){cur.m=0;cur.y++;}selDate=null;render();});
+  $('todayBtn').addEventListener('click',function(){cur={y:now.getFullYear(),m:now.getMonth()};selDate=null;scope='month';render();});
+  $('seg').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;scope=b.dataset.scope;selDate=null;render();});
+
+  render();
+
+  fetch('events.json',{cache:'no-store'})
+    .then(function(r){if(!r.ok)throw new Error('http');return r.json();})
+    .then(function(j){events=clean(j&&j.events);updatedAt=(j&&j.updated)||'';})
+    .catch(function(){failed=true;events=[];})
+    .then(function(){
+      if(editMode){var d=loadDraft();if(Array.isArray(d))events=clean(d);}
+      loaded=true;render();
+    });
+})();
+</script>
+</body>
+</html>
